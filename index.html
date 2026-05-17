@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>DeepLink AIX & Assetlinks Generator</title>
+<meta name="description"
+content="Generate Android Deep Links, Assetlinks JSON files, and AIX extensions easily.">
+
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://glich.unaux.com/gen/deeplinkgen">
+<meta property="og:title" content="DeepLink AIX & Assetlinks Generator">
+<meta property="og:description"
+content="Generate Android App Links, assetlinks.json files, and Kodular/App Inventor configurations.">
+<meta property="og:image"
+content="https://glich.unaux.com/gen/preview-image.png">
+
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+
+<!-- optional Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="DeepLink AIX & Assetlinks Generator">
+<meta name="twitter:description"
+content="Generate Android App Links, assetlinks.json files, and Kodular/App Inventor configurations.">
+<meta name="twitter:image"
+content="https://glich.unaux.com/gen/preview-image.png">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/forge/1.3.1/forge.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: rgba(22, 27, 34, 0.85);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --text-main: #c9d1d9;
+            --text-muted: #8b949e;
+            --accent-primary: #58a6ff;
+            --accent-success: #2ea44f;
+            --accent-success-hover: #238636;
+            --accent-error: #f85149;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            max-width: 650px;
+            margin: 40px auto;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            padding: 0;
+            list-style: none;
+            gap: 10px;
+        }
+
+        .step-node {
+            flex: 1;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            position: relative;
+        }
+
+        .step-node.active { color: var(--accent-primary); }
+        .step-node.completed { color: var(--accent-success); }
+
+        .wizard-step { display: none; }
+        .wizard-step.active { display: block; }
+
+        h2 { margin-top: 0; color: #fff; font-size: 22px; }
+        p { color: var(--text-muted); font-size: 14px; line-height: 1.5; }
+        label { display: block; margin-top: 15px; font-weight: 600; font-size: 14px; }
+
+        input[type="text"], input[type="password"], input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            margin-top: 6px;
+            background: #161b22;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: #fff;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+            font-size: 14px;
+        }
+
+        input:focus { outline: none; border-color: var(--accent-primary); }
+
+        .btn-group { margin-top: 25px; display: flex; gap: 15px; }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            flex: 1;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+        }
+
+        button.primary { background: var(--accent-primary); color: #fff; }
+        button.success { background: var(--accent-success); color: #fff; }
+        button.success:hover { background: var(--accent-success-hover); }
+        button.secondary { background: #21262d; color: var(--text-main); border: 1px solid var(--border-color); }
+        button:hover { opacity: 0.9; }
+
+        pre {
+            background: #161b22;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            font-family: monospace;
+            font-size: 13px;
+        }
+
+        .alert-box { padding: 15px; border-radius: 6px; margin-top: 20px; font-size: 14px; display: none; }
+        .alert-error { background: rgba(248, 81, 73, 0.15); color: #ff7b72; border: 1px solid rgba(248, 81, 73, 0.4); }
+        .alert-info { background: rgba(56, 139, 253, 0.15); color: #79c0ff; border: 1px solid rgba(56, 139, 253, 0.4); }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #21262d;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--accent-primary);
+            text-transform: uppercase;
+            margin-top: 5px;
+        }
+
+        .download-box {
+            background: rgba(46, 164, 79, 0.1);
+            border: 1px solid rgba(46, 164, 79, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .verify-link { color: var(--accent-primary); text-decoration: none; }
+        .verify-link:hover { text-decoration: underline; }
+        .footer-note { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 25px; border-top: 1px solid var(--border-color); padding-top: 15px; }
+
+        /* Responsive Layout Overrides */
+        @media (max-width: 600px) {
+            body {
+                margin: 15px auto;
+                padding: 10px;
+            }
+            .card {
+                padding: 20px 15px;
+            }
+            .step-indicator {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+                margin-bottom: 20px;
+            }
+            .step-node {
+                text-align: left;
+                font-size: 14px;
+            }
+            .btn-group {
+                flex-direction: column;
+                gap: 12px;
+            }
+            button {
+                width: 100%;
+                padding: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <ul class="step-indicator">
+        <li class="step-node active" id="node1">1. Manifest Setup</li>
+        <li class="step-node" id="node2">2. Keystore Sync</li>
+        <li class="step-node" id="node3">3. Export Extensions</li>
+    </ul>
+
+    <div id="globalError" class="alert-box alert-error"></div>
+
+    <div id="step1" class="wizard-step active">
+        <h2>🔗 Configure DeepLink Manifest Properties</h2>
+        <p>Input your mapping elements below. The values will dynamically compile directly into the AIX properties.</p>
+        
+        <label for="packageName">App Package Name</label>
+        <input type="text" id="packageName" placeholder="com.example.myapp" value="com.example.myapp">
+
+        <label for="hostName">Host Domain Name (host)</label>
+        <input type="text" id="hostName" placeholder="yourdomain.com" value="yourdomain.com">
+
+        <label for="schemeName">Scheme Type (scheme)</label>
+        <input type="text" id="schemeName" placeholder="https" value="https">
+
+        <label for="prefixName">Path Prefix (prefix)</label>
+        <input type="text" id="prefixName" placeholder="/open" value="/open">
+
+        <div class="btn-group">
+            <button type="button" class="primary" onclick="goToStep(2)">Continue to Keystore Sync</button>
+        </div>
+    </div>
+
+    <div id="step2" class="wizard-step">
+        <h2>🔒 Safe Client-Side Keystore Signature Sync</h2>
+        <p>Provide your target Android signature production/debug file to extract fingerprints for the Asset Links scheme.</p>
+        
+        <div class="alert-box alert-info" style="display: block;">
+            🛡️ <strong>Zero Tracking Architecture:</strong> Data calculations execute directly within the local browser sandbox cache. No databases or tracking layers are deployed.
+        </div>
+
+        <label for="keystoreFile">Choose .keystore / .jks File</label>
+        <input type="file" id="keystoreFile" accept=".keystore,.jks">
+
+        <label for="keystorePassword">Keystore Access Password</label>
+        <input type="password" id="keystorePassword" placeholder="Enter password configuration">
+
+        <div id="fallbackAixContainer" style="display:none; margin-top: 15px;">
+            <label for="backupAixFile" style="color: var(--accent-error); font-size:13px;">⚠️ Base template 'com.glich.deeplinkext.aix' not found on server root. Upload manually:</label>
+            <input type="file" id="backupAixFile" accept=".aix">
+        </div>
+
+        <div class="btn-group">
+            <button type="button" class="secondary" onclick="goToStep(1)">Back</button>
+            <button type="button" class="success" onclick="processAndCompile()">Compile & Build Assets</button>
+        </div>
+    </div>
+
+    <div id="step3" class="wizard-step">
+        <h2>🚀 Download Packages & Deploy Manifests</h2>
+        <p>Compilation complete. Access your newly customized production files below.</p>
+
+        <div class="download-box">
+            <h3 style="margin-top:0; color:#fff;">📦 Generated Targets</h3>
+            <p style="margin-bottom: 6px;"><strong>Extracted SHA-256:</strong> <br><span id="sha256Display" style="font-family: monospace; color: var(--accent-primary); font-weight: bold; font-size: 13px; word-break: break-all;"></span></p>
+            <div><span id="formatBadge" class="badge">Detected Format</span></div>
+            
+            <div class="btn-group" style="margin-top: 15px;">
+                <button type="button" id="downloadAixBtn" class="primary">Download Modified AIX</button>
+                <button type="button" id="downloadJsonBtn" class="success">Download assetlinks.json</button>
+            </div>
+        </div>
+
+        <h3>📂 Webserver Setup Instructions</h3>
+        <p>Upload your generated <code>assetlinks.json</code> configuration file onto your web host inside a folder called <strong>.well-known</strong>:</p>
+        <pre>https://<span class="host-placeholder">yourdomain.com</span>/.well-known/assetlinks.json</pre>
+
+        <h3>🔍 Verification Systems</h3>
+        <p>Verify execution handling utilizing the live testing engine profile utility link:</p>
+        <p>👉 <a id="verifyLink" class="verify-link" target="_blank" href="https://digitalassetlinks.googleapis.com/v1/statements:list">Google Digital Asset Links API Verifier</a></p>
+
+        <div class="btn-group">
+            <button type="button" class="secondary" onclick="resetWizard()">Build New Asset Set</button>
+        </div>
+    </div>
+
+    <div class="footer-note">
+        ⚡ Engine fully client-side powered. Compiled via high-performance Forge & JSZip micro-libraries.
+    </div>
+</div>
+
+<script>
+    let extractedSha256 = "";
+    let assetJsonString = "";
+    let compiledAixBlob = null;
+
+    // Check availability of target base extension package on launch
+    window.addEventListener('DOMContentLoaded', () => {
+        fetch('com.glich.deeplinkext.aix', { method: 'HEAD' }).catch(() => {
+            document.getElementById('fallbackAixContainer').style.display = 'block';
+        });
+    });
+
+    // JKS Format Parser Engine Implementation
+    function parseJKS(arrayBuffer, password) {
+        const view = new DataView(arrayBuffer);
+        let offset = 0;
+
+        if (view.getUint32(0) !== 0xFEEDFEED) {
+            throw new Error("Not a legacy JKS file.");
+        }
+        offset += 8; // skip magic number and version
+        
+        const count = view.getUint32(offset);
+        offset += 4;
+
+        for (let i = 0; i < count; i++) {
+            const type = view.getUint32(offset);
+            offset += 4;
+
+            const aliasLen = view.getUint16(offset);
+            offset += 2 + aliasLen; // Skip alias characters
+            offset += 8; // Skip Timestamp
+
+            if (type === 1) { // Private Key Entry
+                const encryptedKeyLen = view.getUint32(offset);
+                offset += 4 + encryptedKeyLen;
+                
+                const certCount = view.getUint32(offset);
+                offset += 4;
+                
+                for (let j = 0; j < certCount; j++) {
+                    const certTypeLen = view.getUint16(offset);
+                    offset += 2 + certTypeLen; // Skip cert type string ("X.509")
+                    
+                    const certDataLen = view.getUint32(offset);
+                    offset += 4;
+                    
+                    return new Uint8Array(arrayBuffer, offset, certDataLen);
+                }
+            } else if (type === 2) { // Trusted Cert Entry
+                const certTypeLen = view.getUint16(offset);
+                offset += 2 + certTypeLen;
+                
+                const certDataLen = view.getUint32(offset);
+                offset += 4;
+                
+                return new Uint8Array(arrayBuffer, offset, certDataLen);
+            }
+        }
+        throw new Error("No certificate found inside JKS structure.");
+    }
+
+    function goToStep(stepNumber) {
+        document.getElementById('globalError').style.display = 'none';
+        
+        if (stepNumber === 2) {
+            const pkg = document.getElementById('packageName').value.trim();
+            const host = document.getElementById('hostName').value.trim();
+            const scheme = document.getElementById('schemeName').value.trim();
+            if (!pkg || !host || !scheme) {
+                showError("Please complete all configuration properties in Step 1.");
+                return;
+            }
+        }
+
+        document.querySelectorAll('.wizard-step').forEach(step => step.classList.remove('active'));
+        document.getElementById(`step${stepNumber}`).classList.add('active');
+
+        document.querySelectorAll('.step-node').forEach((node, idx) => {
+            node.classList.remove('active', 'completed');
+            if (idx + 1 < stepNumber) node.classList.add('completed');
+            if (idx + 1 === stepNumber) node.classList.add('active');
+        });
+    }
+
+    function showError(message) {
+        const errorDiv = document.getElementById('globalError');
+        errorDiv.innerText = message;
+        errorDiv.style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function processAndCompile() {
+        document.getElementById('globalError').style.display = 'none';
+
+        const keystoreFile = document.getElementById('keystoreFile').files[0];
+        const password = document.getElementById('keystorePassword').value;
+        const backupAixFile = document.getElementById('backupAixFile').files[0];
+
+        if (!keystoreFile || !password) {
+            showError("Please make sure you have chosen a Keystore file and input its matching password.");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const arrayBuffer = e.target.result;
+            let rawCertBytes = null;
+            let detectedFormat = "";
+
+            // Dual Strategy Extraction Framework
+            try {
+                rawCertBytes = parseJKS(arrayBuffer, password);
+                detectedFormat = "Legacy JKS Format";
+            } catch (jksError) {
+                try {
+                    const bytes = new Uint8Array(arrayBuffer);
+                    const buffer = forge.util.createBuffer(bytes);
+                    const asn1 = forge.asn1.fromDer(buffer);
+                    const p12 = forge.pkcs12.pkcs12FromAsn1(asn1, password);
+
+                    let certificate = null;
+                    for (let i = 0; i < p12.safeContents.length; i++) {
+                        const safeContents = p12.safeContents[i];
+                        for (let j = 0; j < safeContents.safeBags.length; j++) {
+                            const bag = safeContents.safeBags[j];
+                            if (bag.cert) {
+                                certificate = bag.cert;
+                                break;
+                            }
+                        }
+                        if (certificate) break;
+                    }
+
+                    if (certificate) {
+                        const derString = forge.asn1.toDer(forge.pki.certificateToAsn1(certificate)).getBytes();
+                        rawCertBytes = new Uint8Array(derString.length);
+                        for (let i = 0; i < derString.length; i++) {
+                            rawCertBytes[i] = derString.charCodeAt(i);
+                        }
+                        detectedFormat = "Modern PKCS12 Format";
+                    }
+                } catch (pkcs12Error) {
+                    console.error("PKCS12 Parsing attempt failed:", pkcs12Error);
+                }
+            }
+
+            if (rawCertBytes) {
+                try {
+                    let binaryStr = '';
+                    for (let i = 0; i < rawCertBytes.length; i++) {
+                        binaryStr += String.fromCharCode(rawCertBytes[i]);
+                    }
+                    
+                    const md = forge.md.sha256.create();
+                    md.update(binaryStr);
+                    const hex = md.digest().toHex();
+                    extractedSha256 = hex.match(/.{1,2}/g).join(':').toUpperCase();
+
+                    // Generate assetlinks schema structures
+                    const packageName = document.getElementById('packageName').value.trim();
+                    const assetLinksData = [{
+                        "relation": ["delegate_permission/common.handle_all_urls"],
+                        "target": {
+                            "namespace": "android_app",
+                            "package_name": packageName,
+                            "sha256_cert_fingerprints": [extractedSha256]
+                        }
+                    }];
+                    assetJsonString = JSON.stringify(assetLinksData, null, 4);
+                    document.getElementById('formatBadge').innerText = detectedFormat;
+
+                    // Load base server extension package context
+                    if (backupAixFile) {
+                        const aixReader = new FileReader();
+                        aixReader.onload = function(evt) {
+                            modifyAndGenerateAix(evt.target.result);
+                        };
+                        aixReader.readAsArrayBuffer(backupAixFile);
+                    } else {
+                        fetch('com.glich.deeplinkext.aix')
+                            .then(res => {
+                                if (!res.ok) throw new Error("Base source template file 'com.glich.deeplinkext.aix' not accessible via root context server storage paths.");
+                                return res.arrayBuffer();
+                            })
+                            .then(data => modifyAndGenerateAix(data))
+                            .catch(err => {
+                                document.getElementById('fallbackAixContainer').style.display = 'block';
+                                showError("Base file 'com.glich.deeplinkext.aix' missing from your server path. Please drop it into the backup upload window below.");
+                            });
+                    }
+                } catch (cryptoError) {
+                    showError("Could not calculate certificate hash structure.");
+                }
+            } else {
+                showError("Unable to unlock keystore. Please verify your password or ensure the file isn't corrupted.");
+            }
+        };
+
+        reader.readAsArrayBuffer(keystoreFile);
+    }
+
+    function modifyAndGenerateAix(aixArrayBuffer) {
+        const host = document.getElementById('hostName').value.trim();
+        const scheme = document.getElementById('schemeName').value.trim();
+        const prefix = document.getElementById('prefixName').value.trim();
+
+        JSZip.loadAsync(aixArrayBuffer).then(zip => {
+            let targetJsonFile = null;
+
+            zip.forEach((relativePath, file) => {
+                if (relativePath.includes('component_build_infos.json')) {
+                    targetJsonFile = file;
+                }
+            });
+
+            if (!targetJsonFile) {
+                throw new Error("Unable to locate component_build_infos.json manifest structures inside the extension archive.");
+            }
+
+            return targetJsonFile.async('string').then(content => {
+                // Safely matches android:host="host" even inside double-escaped JSON string arrays
+                let updatedContent = content
+                    .replace(/android:host=\\*?"host\\*?"/g, `android:host=\\"${host}\\"`)
+                    .replace(/android:scheme=\\*?"scheme\\*?"/g, `android:scheme=\\"${scheme}\\"`)
+                    .replace(/android:pathPrefix=\\*?"prefix\\*?"/g, `android:pathPrefix=\\"${prefix}\\"`);
+
+                zip.file(targetJsonFile.name, updatedContent);
+                return zip.generateAsync({ type: 'blob' });
+            });
+        })
+        .then(finalBlob => {
+            compiledAixBlob = finalBlob;
+            setupOutputs();
+        })
+        .catch(err => {
+            showError("Internal Extension Compiler Engine Malfunction: " + err.message);
+        });
+    }
+
+    function setupOutputs() {
+        const host = document.getElementById('hostName').value.trim();
+
+        document.getElementById('sha256Display').innerText = extractedSha256;
+        document.querySelectorAll('.host-placeholder').forEach(el => el.innerText = host);
+
+        document.getElementById('downloadJsonBtn').onclick = function() {
+            triggerBlobDownload(new Blob([assetJsonString], { type: 'application/json' }), 'assetlinks.json');
+        };
+
+        document.getElementById('downloadAixBtn').onclick = function() {
+            triggerBlobDownload(compiledAixBlob, 'com.glich.deeplinkext.aix');
+        };
+
+        const testUrl = `https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=https://${host}&relation=delegate_permission/common.handle_all_urls`;
+        document.getElementById('verifyLink').href = testUrl;
+
+        goToStep(3);
+    }
+
+    function triggerBlobDownload(blob, outputFilename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = outputFilename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    function resetWizard() {
+        document.getElementById('keystoreFile').value = "";
+        document.getElementById('keystorePassword').value = "";
+        if(document.getElementById('backupAixFile')) document.getElementById('backupAixFile').value = "";
+        goToStep(1);
+    }
+</script>
+
+</body>
+</html>
